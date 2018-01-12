@@ -2,7 +2,7 @@
   <meta charset="UTF-8">
   <title>Woolies</title>
   <style>
-    label { display: block; }
+    label { display: block; text-align: left; }
 
     label > span {
       display: inline-block;
@@ -24,17 +24,29 @@
     progress {
       visibility: hidden;
     }
+
+    .box {
+      display: inline-block;
+    }
   </style>
 </head>
 <body>
   <div><canvas id="preview" width="1280" height="120"></canvas></div>
   <div><progress id="progress"></progress></div>
-  <label><span>Width:</span><input type="text" id="width"></label>
-  <label><span>Height:</span><input type="text" id="height"></label>
-  <label><span>numFrames:</span><input type="text" id="numFrames"></label>
-  <label><span>fps:</span><input type="text" id="fps"></label>
-  <label><span>timeOffset:</span><input type="text" id="timeOffset"></label>
-  <button type="button" id="generate">Generate</button>
+  <div>
+    <span class="box">
+      <label><span>width:</span><input type="text" id="width"></label>
+      <label><span>height:</span><input type="text" id="height"></label>
+      <label><span>numFrames:</span><input type="text" id="numFrames"></label>
+      <label><span>fps:</span><input type="text" id="fps"></label>
+      <label><span>timeOffset:</span><input type="text" id="timeOffset"></label>
+      <label><span>wantMillisecs:</span><input type="checkbox" id="wantMillisecs"></label>
+    </span>
+  </div>
+  <div>
+    <button type="button" id="generateButton">Generate</button>
+    <button type="button" id="previewButton">Preview</button>
+  </div>
 <script src="woolies.dart.js"></script>
 
 
