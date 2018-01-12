@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>Woolies</title>
+  <style>
+    label { display: block; }
+
+    label > span {
+      display: inline-block;
+      text-align: right;
+      min-width: 256px;
+      margin-right: 8px;
+    }
+
+    #preview {
+      border: 2px solid black;
+      background-color: #888;
+      max-width: calc(100vw - 20px);
+    }
+
+    div {
+      text-align: center;
+    }
+
+    progress {
+      visibility: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div><canvas id="preview" width="1280" height="120"></canvas></div>
+  <div><progress id="progress"></progress></div>
+  <label><span>Width:</span><input type="text" id="width"/></label>
+  <label><span>Height:</span><input type="text" id="height"/></label>
+  <label><span>numFrames:</span><input type="text" id="numFrames"/></label>
+  <label><span>fps:</span><input type="text" id="fps"/></label>
+  <label><span>timeOffset:</span><input type="text" id="timeOffset"/></label>
+  <button type="button" id="generate">Generate</button>
+<script type="application/dart" src="woolies.dart"></script>
+</body>
+</html>
