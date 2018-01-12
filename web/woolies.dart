@@ -4,12 +4,11 @@ import "dart:convert";
 import "package:woolies/zip_tools.dart";
 
 class Woolies {
-  Woolies(this.numFrames, this.fps, {this.timeOffset = 0, this.wantMillisecs = false}) {
+  Woolies(this.numFrames, this.fps, {this.timeOffset = 0, bool wantMillisecs = false})
+      : _wantMillisecs = wantMillisecs ?? false {
     timeOffset ??= 0;
-    wantMillisecs ??= false;
     _ctx = _canvas.context2D;
 
-    _setupStyles(_ctx);
     _refreshMetrics();
   }
 
@@ -103,19 +102,32 @@ class Woolies {
 
   set height(int newHeight) => resize(newHeight: newHeight);
 
+  bool get wantMillisecs => _wantMillisecs;
+
+  set wantMillisecs(bool value) {
+    if (value != _wantMillisecs) {
+      _wantMillisecs = value;
+      _refreshMetrics();
+    }
+  }
+
   String _formatTime(num time) {
     int elapsed = time.floor();
     String minutes = (elapsed ~/ 60).toString().padLeft(2, "0");
     String seconds = (elapsed % 60).toString().padLeft(2, "0");
     String ms = (time.remainder(1.0) * 1000).floor().toString().padLeft(3, "0");
 
-    if (wantMillisecs) return "$minutes:$seconds";
-    else return "$minutes:$seconds.$ms";
+    if (_wantMillisecs)
+      return "$minutes:$seconds.$ms";
+    else
+      return "$minutes:$seconds";
   }
 
-  void _refreshMetrics([CanvasRenderingContext2D ctx]) {
-    ctx ??= _ctx;
-    TextMetrics metrics = ctx.measureText(_formatTime(0));
+  void _refreshMetrics({CanvasRenderingContext2D contextOverride, String text}) {
+    CanvasRenderingContext2D ctx = contextOverride ?? _ctx;
+    _setupStyles(ctx);
+    text ??= _formatTime(0);
+    TextMetrics metrics = ctx.measureText(text);
 
     x = (ctx.canvas.width - metrics.width) * 0.5;
     y = ctx.canvas.height * 0.75;
@@ -133,7 +145,7 @@ class Woolies {
   int numFrames;
   num fps;
   num timeOffset;
-  bool wantMillisecs;
+  bool _wantMillisecs;
   num x;
   num y;
   bool _rendering = false;
@@ -141,14 +153,23 @@ class Woolies {
   CanvasRenderingContext2D _nextFrame;
   Completer<Null> _nextFrameCompleter;
   CanvasRenderingContext2D _ctx;
-  CanvasElement _canvas = new CanvasElement()..width = 1280..height = 120;
+  CanvasElement _canvas = new CanvasElement()
+    ..width = 1280
+    ..height = 120;
 
   static final List<Property<Woolies>> properties = new List.unmodifiable([
-    new Property<Woolies>("width", (Woolies w) => w.width.toString(), (Woolies w, String value) => w.width = int.parse(value)),
-    new Property<Woolies>("height", (Woolies w) => w.height.toString(), (Woolies w, String value) => w.height = int.parse(value)),
-    new Property<Woolies>("numFrames", (Woolies w) => w.numFrames.toString(), (Woolies w, String value) => w.numFrames = int.parse(value)),
-    new Property<Woolies>("fps", (Woolies w) => w.fps.toString(), (Woolies w, String value) => w.fps = double.parse(value)),
-    new Property<Woolies>("timeOffset", (Woolies w) => w.timeOffset.toString(), (Woolies w, String value) => w.timeOffset = double.parse(value))
+    new Property<Woolies>("width", (Woolies w) => w.width.toString(),
+        (Woolies w, String value) => w.width = int.parse(value)),
+    new Property<Woolies>("height", (Woolies w) => w.height.toString(),
+        (Woolies w, String value) => w.height = int.parse(value)),
+    new Property<Woolies>("numFrames", (Woolies w) => w.numFrames.toString(),
+        (Woolies w, String value) => w.numFrames = int.parse(value)),
+    new Property<Woolies>("fps", (Woolies w) => w.fps.toString(),
+        (Woolies w, String value) => w.fps = double.parse(value)),
+    new Property<Woolies>("timeOffset", (Woolies w) => w.timeOffset.toString(),
+        (Woolies w, String value) => w.timeOffset = double.parse(value)),
+    new Property<Woolies>("wantMillisecs", (Woolies w) => w.wantMillisecs.toString(),
+        (Woolies w, String value) => w.wantMillisecs = value == true.toString()),
   ]);
 }
 
@@ -163,19 +184,31 @@ class Property<T> {
   final Setter<T> setter;
 }
 
+final Map<String, bool> stringToBool =
+    new Map.unmodifiable(new Map.fromIterable([false, true], key: (val) => val.toString()));
+
 void _refreshFields(Woolies woolies) {
   for (Property<Woolies> p in Woolies.properties) {
     InputElement input = document.getElementById(p.name);
-    input.value = p.getter(woolies);
+    if (input.type == "checkbox")
+      input.checked = stringToBool[p.getter(woolies)];
+    else
+      input.value = p.getter(woolies);
+  }
+}
+
+void _applyFields(Woolies woolies) {
+  if (woolies.isRendering) return;
+  for (Property<Woolies> p in Woolies.properties) {
+    InputElement input = document.getElementById(p.name);
+    String value = input.type == "checkbox" ? input.checked.toString() : input.value;
+    p.setter(woolies, value);
   }
 }
 
 Future<Null> startRendering(Woolies woolies) async {
   if (woolies.isRendering) return;
-  for (Property<Woolies> p in Woolies.properties) {
-    InputElement input = document.getElementById(p.name);
-    p.setter(woolies, input.value);
-  }
+  _applyFields(woolies);
   _refreshFields(woolies);
   CanvasElement preview = document.getElementById("preview");
   preview.width = woolies.width;
@@ -197,9 +230,18 @@ Future<Null> startRendering(Woolies woolies) async {
 }
 
 Future main() async {
-  Woolies woolies = new Woolies(13825, 30, timeOffset: 210);
+  Woolies woolies = new Woolies(100, 30);
   _refreshFields(woolies);
-  document.getElementById("generate").onClick.listen((_) {
+  document.getElementById("generateButton").onClick.listen((_) {
     startRendering(woolies);
+  });
+  document.getElementById("previewButton").onClick.listen((_) {
+    if (woolies.isRendering) return;
+    _applyFields(woolies);
+    _refreshFields(woolies);
+    CanvasElement preview = document.getElementById("preview");
+    preview.width = woolies.width;
+    preview.height = woolies.height;
+    woolies.drawFrame(timeLeft: 754.567, contextOverride: preview.context2D);
   });
 }
